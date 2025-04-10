@@ -1,18 +1,15 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
-	"strings"
 	"sync"
+
+	W "app_cli/worker"
 
 	"github.com/spf13/cobra"
 )
-
-var keywords []string = []string{"Taj", "Mahal", "Liberty", "Eiffel", "ChatGPT", "deforestation"}
 
 var rootcmd = &cobra.Command{
 	Use:   "The_scanner",
@@ -71,6 +68,7 @@ var textcmd = &cobra.Command{
 			}
 
 			var text_files []string
+			var pdf_files []string
 			for _, e := range entries {
 				fpath := path + "\\" + e.Name()
 				fileInfo, err := os.Lstat(fpath)
@@ -81,12 +79,17 @@ var textcmd = &cobra.Command{
 				name := fileInfo.Name()
 				// fmt.Println("name", name)
 				n := len(name)
-				if name[n-4:] == ".txt" {
+
+				suff := name[n-4:]
+				switch suff {
+				case ".txt":
 					text_files = append(text_files, name)
+				case ".pdf":
+					pdf_files = append(pdf_files, name)
 				}
 			}
 
-			fmt.Println(text_files)
+			fmt.Println(text_files, pdf_files)
 
 			maxGoroutines := 10
 			// Max files which can be read parallely
@@ -99,7 +102,19 @@ var textcmd = &cobra.Command{
 				go func(fpath string) {
 					defer wg.Done()
 					// fmt.Println("wow")
-					worker(fpath)
+					W.Textworker(fpath)
+					<-guard
+				}(fpath)
+			}
+			for _, fname := range pdf_files {
+				guard <- struct{}{} // would block if guard channel is already filled
+				fpath := path + "\\" + fname
+				wg.Add(1)
+				go func(fpath string) {
+					defer wg.Done()
+					// fmt.Println("wow")
+					// W.PrintPDF(fpath)
+					W.PDFWorker(fpath)
 					<-guard
 				}(fpath)
 			}
@@ -107,46 +122,6 @@ var textcmd = &cobra.Command{
 			wg.Wait()
 
 		}
-	},
-}
-
-func worker(path string) {
-
-	// fmt.Println("working on", path)
-	f, err := os.Open(path)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer f.Close()
-
-	// Splits on newlines by default.
-	scanner := bufio.NewScanner(f)
-
-	line := 1
-	for scanner.Scan() {
-		for _, s := range keywords {
-			if strings.Contains(scanner.Text(), s) {
-				fmt.Println(path, line, " contains word ", s)
-			}
-		}
-
-		line++
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Println(err)
-	}
-}
-
-var addcmd = &cobra.Command{
-	Use:     "adder",
-	Aliases: []string{"add"},
-	Short:   "add two numbers using cli",
-	Long:    "performs addition of two numbers using cli",
-	Run: func(cmd *cobra.Command, args []string) {
-		num1, _ := strconv.ParseInt(args[0], 10, 64)
-		num2, _ := strconv.ParseInt(args[1], 10, 64)
-		fmt.Println(num1 + num2)
 	},
 }
 
@@ -158,7 +133,6 @@ func Execute() {
 }
 
 func init() {
-	rootcmd.AddCommand(addcmd)
 	rootcmd.AddCommand(scancmd)
 	rootcmd.AddCommand(textcmd)
 }
