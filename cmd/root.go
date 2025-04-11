@@ -113,8 +113,8 @@ var textcmd = &cobra.Command{
 				go func(fpath string) {
 					defer wg.Done()
 					// fmt.Println("wow")
-					// W.PrintPDF(fpath)
-					W.PDFWorker(fpath)
+					W.PrintPDF(fpath)
+					// W.PDFWorker(fpath)
 					<-guard
 				}(fpath)
 			}

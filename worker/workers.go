@@ -7,11 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"code.sajari.com/docconv"
-	"rsc.io/pdf"
+	"github.com/ledongthuc/pdf"
 )
 
-var keywords []string = []string{"Taj", "Mahal", "Liberty", "Eiffel", "ChatGPT", "deforestation"}
+var keywords []string = []string{"Taj", "Mahal", "Liberty", "Eiffel", "ChatGPT", "deforestation", "Kaggle"}
 
 func Textworker(path string) {
 
@@ -41,52 +40,37 @@ func Textworker(path string) {
 	}
 }
 
-func PDFWorker(path string) {
+func PrintPDF(fpath string) {
 	// Open the PDF file
-	r, err := pdf.Open(path)
+	f, r, err := pdf.Open(fpath)
 	if err != nil {
 		log.Fatalf("failed to open PDF: %v", err)
 	}
+	defer f.Close()
 
-	// Iterate through each page
-	for i := 1; i <= r.NumPage(); i++ {
-		page := r.Page(i)
+	for pageIndex := 1; pageIndex <= r.NumPage(); pageIndex++ {
+		page := r.Page(pageIndex)
 		if page.V.IsNull() {
 			continue
 		}
-		content := page.Content()
 
-		line := 1
+		content := page.Content()
 		cword := ""
 		for _, text := range content.Text {
-
-			fmt.Print(text.S)
-
-			switch text.S {
-			case " ":
-			default:
-				cword += text.S
-				continue
-			}
-
-			fmt.Println("l")
-			fmt.Print(cword, " ")
-			for _, s := range keywords {
-				if strings.Contains(cword, s) {
-					fmt.Println(path, line, " contains word ", s)
+			char := text.S
+			if strings.TrimSpace(char) == "" {
+				if cword != "" {
+					for _, s := range keywords {
+						if strings.Contains(cword, s) {
+							fmt.Println(fpath, " contains word ", s)
+						}
+					}
+					// fmt.Println(cword)
+					cword = ""
 				}
+			} else {
+				cword += char
 			}
-
-			line++
-
 		}
 	}
-}
-
-func PrintPDF(fpath string) {
-	res, err := docconv.ConvertPath(fpath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(res)
 }
