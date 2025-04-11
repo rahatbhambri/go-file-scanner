@@ -1,2 +1,2 @@
-- Build a simple cli app using cobra
-- Add functionality to scan text files for matching keywords
+- Build a simple file scanner cli app using cobra
+- Add functionality to scan text, pdf files in a path for matching keywords
