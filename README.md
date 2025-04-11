@@ -1,2 +1,5 @@
-- Build a simple file scanner cli app using cobra
-- Add functionality to scan text, pdf files in a path for matching keywords
+The cli scanner serves two purposes:
+
+A. Scan an entire folder to display list of files and file metadata 
+
+B. Scan all text and pdf files of a directory for keywords and flag them 
