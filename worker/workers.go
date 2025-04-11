@@ -13,7 +13,6 @@ import (
 var keywords []string = []string{"Taj", "Mahal", "Liberty", "Eiffel", "ChatGPT", "deforestation", "Kaggle"}
 
 func Textworker(path string) {
-
 	// fmt.Println("working on", path)
 	f, err := os.Open(path)
 	if err != nil {
@@ -40,7 +39,7 @@ func Textworker(path string) {
 	}
 }
 
-func PrintPDF(fpath string) {
+func PDFWorker(fpath string) {
 	// Open the PDF file
 	f, r, err := pdf.Open(fpath)
 	if err != nil {

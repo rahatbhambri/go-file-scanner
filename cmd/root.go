@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	W "app_cli/worker"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -92,32 +93,38 @@ var textcmd = &cobra.Command{
 			fmt.Println(text_files, pdf_files)
 
 			maxGoroutines := 10
-			// Max files which can be read parallely
-			guard := make(chan struct{}, maxGoroutines)
+			guard := make(chan struct{}, maxGoroutines) // Semaphore to limit concurrency
 
-			for _, fname := range text_files {
-				guard <- struct{}{} // would block if guard channel is already filled
-				fpath := path + "\\" + fname
+			// Function to handle any file with appropriate worker
+			processFile := func(fpath string, worker func(string)) {
+				guard <- struct{}{} // block if guard channel is full
 				wg.Add(1)
-				go func(fpath string) {
+				go func() {
 					defer wg.Done()
-					// fmt.Println("wow")
-					W.Textworker(fpath)
-					<-guard
-				}(fpath)
+					defer func() { <-guard }()
+					worker(fpath)
+				}()
 			}
-			for _, fname := range pdf_files {
-				guard <- struct{}{} // would block if guard channel is already filled
-				fpath := path + "\\" + fname
-				wg.Add(1)
-				go func(fpath string) {
-					defer wg.Done()
-					// fmt.Println("wow")
-					W.PrintPDF(fpath)
-					// W.PDFWorker(fpath)
-					<-guard
-				}(fpath)
-			}
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// Process text files
+				for _, fname := range text_files {
+					fpath := filepath.Join(path, fname)
+					processFile(fpath, W.Textworker)
+				}
+			}()
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// Process PDF files
+				for _, fname := range pdf_files {
+					fpath := filepath.Join(path, fname)
+					processFile(fpath, W.PDFWorker)
+				}
+			}()
 
 			wg.Wait()
 
