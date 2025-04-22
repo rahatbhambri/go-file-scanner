@@ -53,10 +53,10 @@ var scancmd = &cobra.Command{
 }
 
 var textcmd = &cobra.Command{
-	Use:     "text_file_scanner",
+	Use:     "file_scanner",
 	Aliases: []string{"filescan"},
-	Short:   "cli to scan all text files to search for specific keywords",
-	Long:    "cli to scan all text files to search for specific keywords defined in the config",
+	Short:   "cli to scan all text, pdf and csv files to search for specific keywords",
+	Long:    "cli to scan all text, pdf and csv files to search for specific keywords defined in the config",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 {
 			path := args[0]
@@ -70,6 +70,7 @@ var textcmd = &cobra.Command{
 
 			var text_files []string
 			var pdf_files []string
+			var csv_files []string
 			for _, e := range entries {
 				fpath := path + "\\" + e.Name()
 				fileInfo, err := os.Lstat(fpath)
@@ -87,10 +88,13 @@ var textcmd = &cobra.Command{
 					text_files = append(text_files, name)
 				case ".pdf":
 					pdf_files = append(pdf_files, name)
+				case ".csv":
+					csv_files = append(csv_files, name)
 				}
+
 			}
 
-			fmt.Println(text_files, pdf_files)
+			fmt.Println(text_files, pdf_files, csv_files)
 
 			maxGoroutines := 10
 			guard := make(chan struct{}, maxGoroutines) // Semaphore to limit concurrency
@@ -123,6 +127,16 @@ var textcmd = &cobra.Command{
 				for _, fname := range pdf_files {
 					fpath := filepath.Join(path, fname)
 					processFile(fpath, W.PDFWorker)
+				}
+			}()
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				// Process csv files
+				for _, fname := range csv_files {
+					fpath := filepath.Join(path, fname)
+					processFile(fpath, W.CsvWorker)
 				}
 			}()
 
