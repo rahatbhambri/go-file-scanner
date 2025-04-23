@@ -52,6 +52,22 @@ var scancmd = &cobra.Command{
 	},
 }
 
+func startWorker(wg *sync.WaitGroup, files []string, path string, worker func(string), guard chan struct{}) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for _, fname := range files {
+			guard <- struct{}{}
+			fpath := filepath.Join(path, fname)
+
+			go func(fpath string) {
+				defer func() { <-guard }()
+				worker(fpath)
+			}(fpath)
+		}
+	}()
+}
+
 var textcmd = &cobra.Command{
 	Use:     "file_scanner",
 	Aliases: []string{"filescan"},
@@ -71,6 +87,7 @@ var textcmd = &cobra.Command{
 			var text_files []string
 			var pdf_files []string
 			var csv_files []string
+
 			for _, e := range entries {
 				fpath := path + "\\" + e.Name()
 				fileInfo, err := os.Lstat(fpath)
@@ -100,48 +117,14 @@ var textcmd = &cobra.Command{
 			guard := make(chan struct{}, maxGoroutines) // Semaphore to limit concurrency
 
 			// Function to handle any file with appropriate worker
-			processFile := func(fpath string, worker func(string)) {
-				guard <- struct{}{} // block if guard channel is full
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					defer func() { <-guard }()
-					worker(fpath)
-				}()
-			}
 
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				// Process text files
-				for _, fname := range text_files {
-					fpath := filepath.Join(path, fname)
-					processFile(fpath, W.Textworker)
-				}
-			}()
-
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				// Process PDF files
-				for _, fname := range pdf_files {
-					fpath := filepath.Join(path, fname)
-					processFile(fpath, W.PDFWorker)
-				}
-			}()
-
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				// Process csv files
-				for _, fname := range csv_files {
-					fpath := filepath.Join(path, fname)
-					processFile(fpath, W.CsvWorker)
-				}
-			}()
+			startWorker(&wg, text_files, path, W.Textworker, guard)
+			startWorker(&wg, pdf_files, path, W.PDFWorker, guard)
+			startWorker(&wg, csv_files, path, W.CsvWorker, guard)
 
 			wg.Wait()
 
+			fmt.Println("all done")
 		}
 	},
 }
