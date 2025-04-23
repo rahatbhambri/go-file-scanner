@@ -60,7 +60,9 @@ func startWorker(wg *sync.WaitGroup, files []string, path string, worker func(st
 			guard <- struct{}{}
 			fpath := filepath.Join(path, fname)
 
+			wg.Add(1)
 			go func(fpath string) {
+				defer wg.Done()
 				defer func() { <-guard }()
 				worker(fpath)
 			}(fpath)
@@ -115,8 +117,6 @@ var textcmd = &cobra.Command{
 
 			maxGoroutines := 10
 			guard := make(chan struct{}, maxGoroutines) // Semaphore to limit concurrency
-
-			// Function to handle any file with appropriate worker
 
 			startWorker(&wg, text_files, path, W.Textworker, guard)
 			startWorker(&wg, pdf_files, path, W.PDFWorker, guard)
