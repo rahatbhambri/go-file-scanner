@@ -31,7 +31,6 @@ func Textworker(path string) {
 				fmt.Println(path, line, " contains word ", s)
 			}
 		}
-
 		line++
 	}
 
@@ -65,7 +64,6 @@ func PDFWorker(fpath string) {
 							fmt.Println(fpath, " contains word ", s)
 						}
 					}
-					// fmt.Println(cword)
 					cword = ""
 				}
 			} else {
@@ -90,14 +88,12 @@ func CsvWorker(filePath string) {
 
 	for _, record := range records {
 		for _, word := range record {
-			// fmt.Println(word)
 			for _, s := range keywords {
 				if strings.EqualFold(word, s) {
 					fmt.Println(filePath, " contains word ", s)
 				}
 			}
 		}
-
 	}
 
 }
